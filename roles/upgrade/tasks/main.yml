@@ -1,0 +1,70 @@
+---
+- name: Make sure only one node is upgraded at a time
+  ansible.builtin.assert:
+    that:
+      - ansible_play_batch == [inventory_hostname]
+    msg: "Only one node can be upgraded at a time"
+  run_once: true
+
+- name: List existing nodes
+  community.general.proxmox_node_info:
+    api_host: "{{ inventory_hostname }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password | default(omit) }}"
+  register: proxmox_nodes
+  run_once: true
+
+- name: Fetch all VM information
+  community.general.proxmox_vm_info:
+    api_host: "{{ inventory_hostname }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password | default(omit) }}"
+    type: qemu
+  register: vm_info
+
+- name: Create migration plan
+  ansible.builtin.set_fact:
+    vm_migration_plan: "{{ vm_info['proxmox_vms'] | migration_plan(proxmox_nodes['proxmox_nodes'], inventory_hostname) }}"
+  delegate_to: localhost
+
+- name: Show migration plan
+  ansible.builtin.debug:
+    var: vm_migration_plan
+  run_once: true
+  delegate_to: localhost
+
+- name: Migrate VMs to new node
+  community.general.proxmox_kvm:
+    api_host: "{{ inventory_hostname }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password | default(omit) }}"
+    name: "{{ item.key }}"
+    node: "{{ item.value }}"
+    migrate: true
+    migrate_downtime: "{{ proxmox_upgrade_migration_downtime }}"
+    timeout: "{{ proxmox_upgrade_migration_timeout }}"
+  loop: "{{ vm_migration_plan | dict2items }}"
+  run_once: true
+
+- name: Upgrade node
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: "{{ proxmox_upgrade_mode }}"
+    autoremove: "{{ proxmox_upgrade_autoremove }}"
+
+- name: Reboot node
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ proxmox_upgrade_reboot_timeout }}"
+    msg: "Rebooting node to apply upgrades"
+
+- name: Wait for node to come back online
+  community.general.proxmox_node_info:
+    api_host: "{{ inventory_hostname }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password | default(omit) }}"
+  register: node_info
+  vars:
+    node_status_query: "proxmox_nodes[?node == '{{ inventory_hostname }}'].status | [0]"
+  until: node_info | community.general.json_query(node_status_query) == 'online'
+  retries: 100
+  delay: 10

@@ -1,0 +1,21 @@
+---
+- name: Make sure proxmoxer is installed
+  ansible.builtin.apt:
+    name: python3-proxmoxer
+    update_cache: true
+    state: present
+
+- name: List all running proxmox tasks
+  community.general.proxmox_tasks_info:
+    api_host: "{{ inventory_hostname }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password | default(omit) }}"
+    node: "{{ inventory_hostname }}"
+  register: proxmox_tasks
+
+- name: Make sure no task is running
+  ansible.builtin.assert:
+    that:
+      - item.endtime is defined
+    msg: "Task {{ item.id }} is still running. Make sure no task is running before upgrading."
+  loop: "{{ proxmox_tasks['proxmox_tasks'] }}"

@@ -1,0 +1,11 @@
+---
+# apt upgrade mode
+proxmox_upgrade_mode: dist
+# autoremove packages after upgrade
+proxmox_upgrade_autoremove: true
+# max allowed downtime in seconds
+proxmox_upgrade_migration_downtime: 10
+# timeout to wait for migration to finish
+proxmox_upgrade_migration_timeout: 600
+# timeout to wait for node to reboot
+proxmox_upgrade_reboot_timeout: 600

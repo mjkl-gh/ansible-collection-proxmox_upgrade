@@ -1,0 +1,13 @@
+---
+- name: Run prechecks for cluster upgrade
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: adfinis.proxmox_upgrade.precheck
+
+- name: Upgrade full proxmox cluster
+  hosts: all
+  gather_facts: false
+  serial: 1  # only upgrade one node at a time!
+  roles:
+    - role: adfinis.proxmox_upgrade.upgrade
