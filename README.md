@@ -1,8 +1,8 @@
-# Ansible Collection - adfinis.TEMPLATE
+# Ansible Collection - adfinis.proxmox_upgrade
 
-![License](https://img.shields.io/github/license/adfinis/ansible-collection-TEMPLATE)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/adfinis/ansible-collection-TEMPLATE/ansible-lint.yml)
-[![adfinis.TEMPLATE on Ansible Galaxy](https://img.shields.io/badge/collection-adfinis.TEMPLATE-blue)](https://galaxy.ansible.com/ui/repo/published/adfinis/TEMPLATE/)
+![License](https://img.shields.io/github/license/adfinis/ansible-collection-proxmox_upgrade)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/adfinis/ansible-collection-proxmox_upgrade/ansible-lint.yml)
+[![adfinis.proxmox_upgrade on Ansible Galaxy](https://img.shields.io/badge/collection-adfinis.proxmox_upgrade-blue)](https://galaxy.ansible.com/ui/repo/published/adfinis/proxmox_upgrade/)
 
 
 This should serve as a TEMPLATE to create new collections.
@@ -17,18 +17,21 @@ You can submit new releases of your collection to Ansible Galaxy simply by creat
 
 Provide a short description of each role in your collection.  If your collection contains other artifacts such as playbooks or plugins, describe them as well.
 
-### `adfinis.TEMPLATE.example_role`
+### `adfinis.proxmox_upgrade.proxmox_upgrade`
 
 A short description of example_role goes here, along with its options and a minimal usage example.
 
+### `adfinis.proxmox_upgrade.proxmox_upgrade_precheck`
+
+TODO
 
 ## License
 
-[GPL-3.0-or-later](https://github.com/adfinis-sygroup/ansible-collection-TEMPLATE/blob/main/LICENSE)
+[GPL-3.0-or-later](https://github.com/adfinis/ansible-collection-proxmox_upgrade/blob/main/LICENSE)
 
 ## Author Information
 
-The Ansible collection `adfinis.TEMPLATE` was written by:
+The Ansible collection `adfinis.proxmox_upgrade` was written by:
 
 * Adfinis AG | [Website](https://www.adfinis.com/) | [GitHub](https://github.com/adfinis)
 
