@@ -1,10 +1,8 @@
 # Ansible Collection - adfinis.proxmox_upgrade
 
 ![License](https://img.shields.io/github/license/adfinis/ansible-collection-proxmox_upgrade)
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/adfinis/ansible-collection-proxmox_upgrade/ansible-lint.yml)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/adfinis/ansible-collection-proxmox_upgrade/ansible-galaxy.yml)
 [![adfinis.proxmox_upgrade on Ansible Galaxy](https://img.shields.io/badge/collection-adfinis.proxmox_upgrade-blue)](https://galaxy.ansible.com/ui/repo/published/adfinis/proxmox_upgrade/)
-
-## 🚧 This is a work in progress. Dont use in production just yet! 🚧
 
 This should serve as a TEMPLATE to create new collections.
 

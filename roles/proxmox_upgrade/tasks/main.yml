@@ -8,7 +8,7 @@
 
 - name: List existing nodes
   community.general.proxmox_node_info:
-    api_host: "{{ inventory_hostname }}"
+    api_host: "{{ proxmox_upgrade_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
   register: proxmox_nodes
@@ -16,7 +16,7 @@
 
 - name: Fetch all VM information
   community.general.proxmox_vm_info:
-    api_host: "{{ inventory_hostname }}"
+    api_host: "{{ proxmox_upgrade_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
     type: qemu
@@ -24,7 +24,7 @@
 
 - name: Create migration plan
   ansible.builtin.set_fact:
-    vm_migration_plan: "{{ vm_info['proxmox_vms'] | migration_plan(proxmox_nodes['proxmox_nodes'], inventory_hostname) }}"
+    vm_migration_plan: "{{ vm_info['proxmox_vms'] | adfinis.proxmox_upgrade.migration_plan(proxmox_nodes['proxmox_nodes'], inventory_hostname) }}"
   delegate_to: localhost
 
 - name: Show migration plan
@@ -33,9 +33,35 @@
   run_once: true
   delegate_to: localhost
 
+- name: Confirm VM migration
+  ansible.builtin.pause:
+    prompt: |
+      The following VMs will be migrated from {{ inventory_hostname }}:
+      {% for vm_name, target_node in vm_migration_plan.items() %}
+      - {{ vm_name }} -> {{ target_node }}
+      {% endfor %}
+
+      Do you want to proceed with the migration? (yes/no)
+  register: migration_confirmation
+  run_once: true
+  when:
+    - vm_migration_plan | length > 0
+    - proxmox_upgrade_confirm_migration | bool
+
+- name: Validate migration confirmation
+  ansible.builtin.assert:
+    that:
+      - migration_confirmation.user_input | lower in ['yes', 'y']
+    fail_msg: "Migration cancelled by user"
+    success_msg: "Migration confirmed, proceeding..."
+  run_once: true
+  when:
+    - vm_migration_plan | length > 0
+    - proxmox_upgrade_confirm_migration | bool
+
 - name: Migrate VMs to new node
   community.general.proxmox_kvm:
-    api_host: "{{ inventory_hostname }}"
+    api_host: "{{ proxmox_upgrade_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
     name: "{{ item.key }}"
@@ -45,6 +71,10 @@
     timeout: "{{ proxmox_upgrade_migration_timeout }}"
   loop: "{{ vm_migration_plan | dict2items }}"
   run_once: true
+  when: >
+    vm_migration_plan | length > 0 and
+    (not proxmox_upgrade_confirm_migration | bool or
+     (migration_confirmation is defined and migration_confirmation.user_input | lower in ['yes', 'y']))
 
 - name: Upgrade node
   ansible.builtin.apt:
@@ -59,12 +89,12 @@
 
 - name: Wait for node to come back online
   community.general.proxmox_node_info:
-    api_host: "{{ inventory_hostname }}"
+    api_host: "{{ proxmox_upgrade_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
   register: node_info
   vars:
-    node_status_query: "proxmox_nodes[?node == '{{ inventory_hostname }}'].status | [0]"
+    node_status_query: "proxmox_nodes[?node == '{{ proxmox_upgrade_api_hostname }}'].status | [0]"
   until: node_info | community.general.json_query(node_status_query) == 'online'
   retries: 100
   delay: 10

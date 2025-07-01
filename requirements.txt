@@ -1,1 +1,5 @@
 jmespath
+molecule
+pytest
+pytest-cov
+ansible-core

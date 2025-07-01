@@ -1,0 +1,127 @@
+# to make sure the pve1 node is created before the other nodes, we
+# have to force a --no-parallel execution.
+ENV['VAGRANT_NO_PARALLEL'] = 'yes'
+
+# to be able to configure hyper-v vm and add extra disks.
+ENV['VAGRANT_EXPERIMENTAL'] = 'typed_triggers,disks'
+
+number_of_nodes = 3
+vagrant_management_network = '10.1.0.0/24'
+service_network_first_node_ip = '10.0.1.201'
+cluster_network_first_node_ip = '10.0.2.201'; cluster_network='10.0.2.0'
+storage_network_first_node_ip = '10.0.3.201'; storage_network='10.0.3.0'
+gateway_ip = '10.0.1.254'
+upstream_dns_server = '9.9.9.9'
+
+storage_mtu = 9000
+
+require 'ipaddr'
+service_ip_addr = IPAddr.new service_network_first_node_ip
+cluster_ip_addr = IPAddr.new cluster_network_first_node_ip
+storage_ip_addr = IPAddr.new storage_network_first_node_ip
+
+storage_monitor_ip_addr = storage_ip_addr
+storage_monitor_ips = (1..number_of_nodes).map do |n|
+  storage_monitor_ip = storage_monitor_ip_addr.to_s
+  storage_monitor_ip_addr = storage_monitor_ip_addr.succ
+  storage_monitor_ip
+end.join(';')
+
+Vagrant.configure('2') do |config|
+  config.vagrant.plugins = [
+    "vagrant-reload",
+    "vagrant-libvirt"
+  ]
+
+  config.vm.box = 'proxmox-ve-amd64'
+  config.vm.provider :libvirt do |lv, config|
+    lv.memory = 3*1024
+    lv.cpus = 4
+    lv.cpu_mode = 'host-passthrough'
+    lv.nested = true # nested virtualization.
+    lv.keymap = 'pt'
+    lv.disk_bus = 'scsi'
+    lv.disk_device = 'sda'
+    lv.disk_driver :discard => 'unmap', :cache => 'unsafe'
+    config.vm.synced_folder '.', '/vagrant', type: 'nfs', nfs_version: '4.2', nfs_udp: false
+  end
+
+  config.vm.define 'gateway' do |config|
+    config.vm.box = 'bento/ubuntu-24.04'
+    config.vm.provider :libvirt do |lv|
+      lv.memory = 2*1024
+    end
+    config.vm.hostname = 'gateway.example.com'
+    config.vm.network :private_network,
+      ip: gateway_ip,
+      libvirt__forward_mode: 'none',
+      libvirt__dhcp_enabled: false
+    certificate_ip_addr = IPAddr.new service_network_first_node_ip
+    certificate_ip2_addr = IPAddr.new cluster_network_first_node_ip
+    (1..number_of_nodes).each do |n|
+      certificate_ip = certificate_ip_addr.to_s; certificate_ip_addr = certificate_ip_addr.succ
+      certificate_ip2 = certificate_ip2_addr.to_s; certificate_ip2_addr = certificate_ip2_addr.succ
+      config.vm.provision :shell, path: './provisioners/certificate.sh', args: ["pve#{n}.example.com", certificate_ip, certificate_ip2]
+    end
+    config.vm.provision :shell, path: './provisioners/certificate.sh', args: ['example.com', gateway_ip]
+    config.vm.provision :shell, path: './provisioners/gateway.sh', args: [gateway_ip, upstream_dns_server]
+    config.vm.provision :shell, path: './provisioners/grub.sh'
+    #config.vm.provision :shell, path: 'provision-postfix.sh'
+    #config.vm.provision :shell, path: 'provision-dovecot.sh'
+  end
+
+  (1..number_of_nodes).each do |n|
+    name = "pve#{n}"
+    fqdn = "#{name}.example.com"
+    service_ip = service_ip_addr.to_s; service_ip_addr = service_ip_addr.succ
+    cluster_ip = cluster_ip_addr.to_s; cluster_ip_addr = cluster_ip_addr.succ
+    storage_ip = storage_ip_addr.to_s; storage_ip_addr = storage_ip_addr.succ
+    config.vm.define name do |config|
+      config.vm.hostname = fqdn
+      config.vm.provider :libvirt do |lv|
+        lv.storage :file, :size => '30G', :bus => 'scsi', :discard => 'unmap', :cache => 'unsafe'
+        #config.vm.synced_folder '.', '/vagrant', type: 'nfs', nfs_version: '4.2', nfs_udp: false
+      end
+      config.vm.network :private_network,
+        ip: service_ip,
+        auto_config: false,
+        libvirt__forward_mode: 'none',
+        libvirt__dhcp_enabled: false
+      config.vm.network :private_network,
+        ip: cluster_ip,
+        auto_config: false,
+        libvirt__forward_mode: 'none',
+        libvirt__dhcp_enabled: false
+      config.vm.network :private_network,
+        ip: storage_ip,
+        auto_config: false,
+        libvirt__mtu: storage_mtu,
+        libvirt__forward_mode: 'none',
+        libvirt__dhcp_enabled: false
+      config.vm.provision :shell,
+        path: './provisioners/provision.sh',
+        args: [
+          n,
+          service_ip,
+          cluster_network_first_node_ip,
+          cluster_network,
+          cluster_ip,
+          storage_ip,
+          gateway_ip,
+          storage_mtu,
+        ]
+      config.vm.provision :reload
+      config.vm.provision :shell, path: './provisioners/grub.sh'
+      config.vm.provision :shell, path: './provisioners/pveproxy-certificate.sh', args: service_ip
+      config.vm.provision :shell, path: './provisioners/storage.sh', args: [
+          storage_network_first_node_ip,
+          storage_network,
+          storage_ip,
+          storage_monitor_ips
+        ]
+      #config.vm.provision :shell, path: 'provision-alpine-template-container.sh', args: [service_ip, gateway_ip]
+      config.vm.provision :shell, path: './provisioners/debian-live-virtual-machine.sh', args: gateway_ip
+      config.vm.provision :shell, path: './provisioners/summary.sh', args: service_ip
+    end
+  end
+end

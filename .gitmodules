@@ -1,0 +1,3 @@
+[submodule "proxmox-vagrant-box"]
+	path = proxmox-vagrant-box
+	url = https://github.com/adfinis-forks/proxmox-ve

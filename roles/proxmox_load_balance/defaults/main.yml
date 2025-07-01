@@ -1,0 +1,11 @@
+---
+# Proxmox Load Balance role defaults
+# hostname to connect to Proxmox API
+proxmox_load_balance_api_hostname: "{{ inventory_hostname }}"
+
+# Migration settings for load balancing
+proxmox_load_balance_migration_downtime: 10
+proxmox_load_balance_migration_timeout: 900
+
+# Confirm before executing load balancing migrations
+proxmox_load_balance_confirm_migration: true

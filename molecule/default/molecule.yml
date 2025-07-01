@@ -1,0 +1,60 @@
+---
+driver:
+  name: default
+
+platforms:
+  - name: gateway
+  - name: pve1
+    groups: [pve_nodes]
+  - name: pve2
+    groups: [pve_nodes]
+  - name: pve3
+    groups: [pve_nodes]
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_COLLECTIONS_PATH: ../..:~/.ansible/collections:/usr/share/ansible/collections
+  config_options:
+    defaults:
+      collections_path: ../..:~/.ansible/collections:/usr/share/ansible/collections
+  requirements_file: requirements.yml
+
+  inventory:
+    group_vars:
+      pve_nodes:
+        proxmox_api_user: root@pam
+        proxmox_api_password: vagrant
+    host_vars:
+      gateway:
+        ansible_host: 10.0.1.254
+        ansible_user: vagrant
+        ansible_ssh_private_key_file: "../../proxmox-vagrant-cluster/.vagrant/machines/gateway/libvirt/private_key"
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+      pve1:
+        ansible_host: 10.0.1.201
+        ansible_user: vagrant
+        ansible_ssh_private_key_file: "../../proxmox-vagrant-cluster/.vagrant/machines/pve1/libvirt/private_key"
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+      pve2:
+        ansible_host: 10.0.1.202
+        ansible_user: vagrant
+        ansible_ssh_private_key_file: "../../proxmox-vagrant-cluster/.vagrant/machines/pve2/libvirt/private_key"
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+      pve3:
+        ansible_host: 10.0.1.203
+        ansible_user: vagrant
+        ansible_ssh_private_key_file: "../../proxmox-vagrant-cluster/.vagrant/machines/pve3/libvirt/private_key"
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+verifier:
+  name: ansible
+
+scenario:
+  name: default
+  test_sequence:
+    - destroy
+    - create
+    - converge
+    - verify
+    - destroy

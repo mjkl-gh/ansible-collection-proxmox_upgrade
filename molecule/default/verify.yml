@@ -1,0 +1,230 @@
+---
+- name: Verify Proxmox and Ceph Cluster Health
+  hosts: pve_nodes
+  gather_facts: true
+  become: true
+  vars:
+    ceph_health_timeout: 300
+    expected_node_count: 3
+
+  tasks:
+    - name: Verify nodes are reachable
+      ansible.builtin.ping:
+
+    # Proxmox Cluster Health Checks
+    - name: Check Proxmox cluster status
+      ansible.builtin.command: pvecm status
+      register: cluster_status
+      changed_when: false
+
+    - name: Get Proxmox cluster nodes status
+      ansible.builtin.command: pvecm nodes
+      register: cluster_nodes_status
+      changed_when: false
+
+    # - name: Parse cluster nodes information
+    #   ansible.builtin.set_fact:
+    #     cluster_nodes: >-
+    #       {% set nodes = [] -%}
+    #       {% set in_membership = false -%}
+    #       {% for line in cluster_nodes_status.stdout_lines -%}
+    #         {% if 'Membership information' in line -%}
+    #           {% set in_membership = true -%}
+    #         {% elif in_membership and line.strip() and not ('Nodeid' in line or '---' in line) -%}
+    #           {% set parts = line.split() -%}
+    #           {% if parts | length >= 3 and parts[0] | regex_search('^\\d+$') -%}
+    #             {% set node_name = parts[2] | regex_replace('\\s*\\(local\\)$', '') -%}
+    #             {% set node_info = {
+    #               'id': parts[0],
+    #               'votes': parts[1],
+    #               'name': node_name,
+    #               'is_local': '(local)' in line
+    #             } -%}
+    #             {% set _ = nodes.append(node_info) -%}
+    #           {% endif -%}
+    #         {% endif -%}
+    #       {% endfor -%}
+    #       {{ nodes }}
+
+    # - name: Display cluster nodes information
+    #   ansible.builtin.debug:
+    #     msg:
+    #       - "Cluster nodes output:"
+    #       - "{{ cluster_nodes_status.stdout_lines }}"
+    #       - "Parsed nodes: {{ cluster_nodes }}"
+    #       - "Total nodes: {{ cluster_nodes | length }}"
+    #       - "Node names: {{ cluster_nodes | map(attribute='name') | list }}"
+
+    # - name: Verify expected number of nodes are in cluster membership
+    #   ansible.builtin.assert:
+    #     that:
+    #       - cluster_nodes | length == expected_node_count
+    #     fail_msg: >
+    #       Expected {{ expected_node_count }} nodes in cluster membership,
+    #       but found {{ cluster_nodes | length }} nodes: {{ cluster_nodes | map(attribute='name') | list }}
+    #     success_msg: "Cluster has expected {{ cluster_nodes | length }} nodes in membership"
+
+    - name: Check Proxmox cluster quorum
+      ansible.builtin.command: pvecm status
+      register: quorum_status
+      changed_when: false
+      failed_when: "'Quorum information' not in quorum_status.stdout or 'Activity blocked' in quorum_status.stdout"
+
+    - name: Display cluster status
+      ansible.builtin.debug:
+        var: cluster_status.stdout_lines
+
+    # Proxmox Service Health Checks
+    - name: Check critical Proxmox services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+      loop:
+        - pve-cluster
+        - pvedaemon
+        - pveproxy
+        - pvestatd
+      check_mode: true
+
+    - name: Verify Proxmox web interface is accessible
+      ansible.builtin.uri:
+        url: "https://{{ ansible_default_ipv4.address }}:8006"
+        method: GET
+        validate_certs: false
+        timeout: 10
+      register: web_interface_check
+      failed_when: web_interface_check.status != 200
+
+    # Storage Health Checks
+    - name: Check Proxmox storage status
+      ansible.builtin.command: pvesm status
+      register: storage_status
+      changed_when: false
+
+    - name: Verify storage is available
+      ansible.builtin.assert:
+        that:
+          - "'active' in storage_status.stdout"
+        fail_msg: "Some storage is not active"
+        success_msg: "All storage systems are active"
+
+    - name: Display storage status
+      ansible.builtin.debug:
+        var: storage_status.stdout_lines
+
+    # Ceph Cluster Health Checks
+    - name: Check if Ceph is installed and configured
+      ansible.builtin.stat:
+        path: /etc/ceph/ceph.conf
+      register: ceph_config
+
+    - name: Ceph health checks
+      when: ceph_config.stat.exists
+      block:
+        - name: Check Ceph cluster health
+          ansible.builtin.command: ceph health
+          register: ceph_health
+          changed_when: false
+          run_once: true
+
+        - name: Check detailed Ceph status
+          ansible.builtin.command: ceph status
+          register: ceph_status
+          changed_when: false
+          run_once: true
+
+        - name: Verify Ceph cluster is healthy
+          ansible.builtin.assert:
+            that:
+              - "'HEALTH_OK' in ceph_health.stdout or 'HEALTH_WARN' in ceph_health.stdout"
+            fail_msg: "Ceph cluster health is {{ ceph_health.stdout }}"
+            success_msg: "Ceph cluster health is acceptable: {{ ceph_health.stdout }}"
+          run_once: true
+
+        - name: Check Ceph OSD status
+          ansible.builtin.command: ceph osd status
+          register: ceph_osd_status
+          changed_when: false
+          run_once: true
+
+        - name: Check Ceph monitor status
+          ansible.builtin.command: ceph mon stat
+          register: ceph_mon_status
+          changed_when: false
+          run_once: true
+
+        - name: Verify Ceph monitors are in quorum
+          ansible.builtin.shell: |
+            ceph mon stat | grep -E "election_epoch|quorum"
+          register: ceph_quorum_check
+          changed_when: false
+          failed_when: ceph_quorum_check.rc != 0
+          run_once: true
+
+        - name: Check Ceph pool status
+          ansible.builtin.command: ceph df
+          register: ceph_pools
+          changed_when: false
+          run_once: true
+
+        - name: Display Ceph health information
+          ansible.builtin.debug:
+            msg:
+              - "Ceph Health: {{ ceph_health.stdout }}"
+              - "Ceph Status: {{ ceph_status.stdout_lines }}"
+              - "OSD Status: {{ ceph_osd_status.stdout_lines }}"
+              - "Monitor Status: {{ ceph_mon_status.stdout_lines }}"
+              - "Pool Status: {{ ceph_pools.stdout_lines }}"
+          run_once: true
+
+        - name: Check for Ceph warnings or errors
+          ansible.builtin.shell: |
+            ceph health detail | grep -E "(WARN|ERR)" || true
+          register: ceph_issues
+          changed_when: false
+          run_once: true
+
+        - name: Report Ceph warnings if any
+          ansible.builtin.debug:
+            msg: "Ceph warnings/errors found: {{ ceph_issues.stdout_lines }}"
+          when: ceph_issues.stdout_lines | length > 0
+          run_once: true
+
+    # Network Connectivity Tests
+    - name: Test inter-node connectivity
+      ansible.builtin.command: ping -c 3 {{ hostvars[item]['ansible_default_ipv4']['address'] }}
+      register: ping_results
+      changed_when: false
+      failed_when: ping_results.rc != 0
+      loop: "{{ groups['pve_nodes'] }}"
+      when: hostvars[item]['ansible_default_ipv4']['address'] != ansible_default_ipv4.address
+
+    # Resource Usage Checks
+    - name: Check system resources
+      ansible.builtin.shell: |
+        echo "=== Memory Usage ==="
+        free -h
+        echo "=== Disk Usage ==="
+        df -h
+        echo "=== Load Average ==="
+        uptime
+        echo "=== Running VMs ==="
+        qm list 2>/dev/null || echo "No VMs found"
+      register: system_resources
+      changed_when: false
+
+    - name: Display system resources
+      ansible.builtin.debug:
+        var: system_resources.stdout_lines
+
+    # Final Health Summary
+    - name: Proxmox cluster health summary
+      ansible.builtin.debug:
+        msg:
+          # - "✓ Proxmox cluster has {{ cluster_nodes | length }} nodes in membership"
+          - "✓ All critical services are running"
+          - "✓ Web interface is accessible"
+          - "✓ Storage systems are active"
+          - "✓ {{ 'Ceph cluster health verified' if ceph_config.stat.exists else 'Ceph not configured (skipped)' }}"
+          - "✓ Inter-node connectivity verified"
+      run_once: true

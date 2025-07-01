@@ -1,0 +1,54 @@
+---
+- name: Create
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Bring up Vagrant cluster
+      ansible.builtin.command:
+        cmd: vagrant up
+        chdir: "{{ playbook_dir }}/../../proxmox-vagrant-cluster"
+      register: vagrant_up_result
+      changed_when: "'already running' not in vagrant_up_result.stdout"
+
+    - name: Wait for nodes to be accessible
+      ansible.builtin.wait_for:
+        host: "{{ item }}"
+        port: 22
+        timeout: 300
+      loop:
+        - 10.0.1.254  # gateway
+        - 10.0.1.201  # pve1
+        - 10.0.1.202  # pve2
+        - 10.0.1.203  # pve3
+
+    - name: Create instance config
+      ansible.builtin.copy:
+        content: |
+          # Molecule managed
+          ---
+          - instance: gateway
+            address: 10.0.1.254
+            user: vagrant
+            port: 22
+            identity_file: {{ playbook_dir }}/../../proxmox-vagrant-cluster/.vagrant/machines/gateway/libvirt/private_key
+
+          - instance: pve1
+            address: 10.0.1.201
+            user: vagrant
+            port: 22
+            identity_file: {{ playbook_dir }}/../../proxmox-vagrant-cluster/.vagrant/machines/pve1/libvirt/private_key
+
+          - instance: pve2
+            address: 10.0.1.202
+            user: vagrant
+            port: 22
+            identity_file: {{ playbook_dir }}/../../proxmox-vagrant-cluster/.vagrant/machines/pve2/libvirt/private_key
+
+          - instance: pve3
+            address: 10.0.1.203
+            user: vagrant
+            port: 22
+            identity_file: {{ playbook_dir }}/../../proxmox-vagrant-cluster/.vagrant/machines/pve3/libvirt/private_key
+        dest: "{{ molecule_ephemeral_directory }}/instance_config.yml"
+        mode: '0644'

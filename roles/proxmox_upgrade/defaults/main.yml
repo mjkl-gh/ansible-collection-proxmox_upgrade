@@ -1,4 +1,7 @@
 ---
+# Proxmox Upgrade role defaults
+# hostname to connect to Proxmox API
+proxmox_upgrade_api_hostname: "{{ inventory_hostname }}"
 # apt upgrade mode
 proxmox_upgrade_mode: dist
 # autoremove packages after upgrade
@@ -9,3 +12,5 @@ proxmox_upgrade_migration_downtime: 10
 proxmox_upgrade_migration_timeout: 600
 # timeout to wait for node to reboot
 proxmox_upgrade_reboot_timeout: 600
+# confirm before migrating VMs
+proxmox_upgrade_confirm_migration: true

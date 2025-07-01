@@ -1,2 +1,7 @@
-__pycache__/
+.vagrant
+proxmox-vagrant-cluster/shared
+__pycache__
 venv/
+.vscode/
+.ansible/
+.coverage

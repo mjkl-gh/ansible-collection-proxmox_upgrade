@@ -1,5 +1,6 @@
 from ansible.errors import AnsibleFilterError
 
+
 class FilterModule(object):
     """Ansible custom filters"""
 
