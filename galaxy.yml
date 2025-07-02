@@ -5,7 +5,7 @@ version: 0.1.0
 readme: README.md
 authors:
   - Adfinis <support@adfinis.com>
-description:  An ansible collection for automated proxmox cluster upgrades
+description: An ansible collection for automated proxmox cluster upgrades
 license_file: 'LICENSE'
 tags:
   - linux

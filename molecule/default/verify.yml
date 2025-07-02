@@ -121,19 +121,19 @@
     - name: Ceph health checks
       when: ceph_config.stat.exists
       block:
-        - name: Check Ceph cluster health
+        - name: Check Ceph cluster health  # noqa: run-once[task]
           ansible.builtin.command: ceph health
           register: ceph_health
           changed_when: false
           run_once: true
 
-        - name: Check detailed Ceph status
+        - name: Check detailed Ceph status  # noqa: run-once[task]
           ansible.builtin.command: ceph status
           register: ceph_status
           changed_when: false
           run_once: true
 
-        - name: Verify Ceph cluster is healthy
+        - name: Verify Ceph cluster is healthy  # noqa: run-once[task]
           ansible.builtin.assert:
             that:
               - "'HEALTH_OK' in ceph_health.stdout or 'HEALTH_WARN' in ceph_health.stdout"
@@ -141,33 +141,34 @@
             success_msg: "Ceph cluster health is acceptable: {{ ceph_health.stdout }}"
           run_once: true
 
-        - name: Check Ceph OSD status
+        - name: Check Ceph OSD status  # noqa: run-once[task]
           ansible.builtin.command: ceph osd status
           register: ceph_osd_status
           changed_when: false
           run_once: true
 
-        - name: Check Ceph monitor status
+        - name: Check Ceph monitor status  # noqa: run-once[task]
           ansible.builtin.command: ceph mon stat
           register: ceph_mon_status
           changed_when: false
           run_once: true
 
-        - name: Verify Ceph monitors are in quorum
+        - name: Verify Ceph monitors are in quorum  # noqa: run-once[task]
           ansible.builtin.shell: |
+            set -o pipefail
             ceph mon stat | grep -E "election_epoch|quorum"
           register: ceph_quorum_check
           changed_when: false
           failed_when: ceph_quorum_check.rc != 0
           run_once: true
 
-        - name: Check Ceph pool status
+        - name: Check Ceph pool status  # noqa: run-once[task]
           ansible.builtin.command: ceph df
           register: ceph_pools
           changed_when: false
           run_once: true
 
-        - name: Display Ceph health information
+        - name: Display Ceph health information  # noqa: run-once[task]
           ansible.builtin.debug:
             msg:
               - "Ceph Health: {{ ceph_health.stdout }}"
@@ -177,14 +178,15 @@
               - "Pool Status: {{ ceph_pools.stdout_lines }}"
           run_once: true
 
-        - name: Check for Ceph warnings or errors
+        - name: Check for Ceph warnings or errors  # noqa: run-once[task]
           ansible.builtin.shell: |
+            set -o pipefail
             ceph health detail | grep -E "(WARN|ERR)" || true
           register: ceph_issues
           changed_when: false
           run_once: true
 
-        - name: Report Ceph warnings if any
+        - name: Report Ceph warnings if any  # noqa: run-once[task]
           ansible.builtin.debug:
             msg: "Ceph warnings/errors found: {{ ceph_issues.stdout_lines }}"
           when: ceph_issues.stdout_lines | length > 0
@@ -218,7 +220,7 @@
         var: system_resources.stdout_lines
 
     # Final Health Summary
-    - name: Proxmox cluster health summary
+    - name: Proxmox cluster health summary  # noqa: run-once[task]
       ansible.builtin.debug:
         msg:
           # - "✓ Proxmox cluster has {{ cluster_nodes | length }} nodes in membership"
