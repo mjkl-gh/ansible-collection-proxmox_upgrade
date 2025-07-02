@@ -94,6 +94,7 @@
   ansible.builtin.reboot:
     reboot_timeout: "{{ proxmox_upgrade_reboot_timeout }}"
     msg: "Rebooting node to apply upgrades"
+    search_paths: ['/lib/molly-guard', '/sbin']
 
 - name: Wait for node to come back online
   community.general.proxmox_node_info:
