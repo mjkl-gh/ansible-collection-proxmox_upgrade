@@ -1,1 +1,2 @@
 ---
+precheck_node_name: "{{ inventory_hostname }}"

@@ -14,3 +14,5 @@ proxmox_upgrade_migration_timeout: 600
 proxmox_upgrade_reboot_timeout: 600
 # confirm before migrating VMs
 proxmox_upgrade_confirm_migration: true
+# name of the node
+proxmox_upgrade_node_name: "{{ inventory_hostname }}"

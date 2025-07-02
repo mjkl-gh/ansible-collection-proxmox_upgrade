@@ -24,7 +24,7 @@
 
 - name: Create migration plan
   ansible.builtin.set_fact:
-    vm_migration_plan: "{{ vm_info['proxmox_vms'] | adfinis.proxmox_upgrade.migration_plan(proxmox_nodes['proxmox_nodes'], inventory_hostname) }}"
+    vm_migration_plan: "{{ vm_info['proxmox_vms'] | adfinis.proxmox_upgrade.migration_plan(proxmox_nodes['proxmox_nodes'], proxmox_upgrade_node_name) }}"
   delegate_to: localhost
 
 - name: Show migration plan
@@ -36,7 +36,7 @@
 - name: Confirm VM migration
   ansible.builtin.pause:
     prompt: |
-      The following VMs will be migrated from {{ inventory_hostname }}:
+      The following VMs will be migrated from {{ proxmox_upgrade_node_name }}:
       {% for vm_name, target_node in vm_migration_plan.items() %}
       - {{ vm_name }} -> {{ target_node }}
       {% endfor %}
@@ -94,7 +94,7 @@
     api_password: "{{ proxmox_api_password | default(omit) }}"
   register: node_info
   vars:
-    node_status_query: "proxmox_nodes[?node == '{{ proxmox_upgrade_api_hostname }}'].status | [0]"
+    node_status_query: "proxmox_nodes[?node == '{{ proxmox_upgrade_node_name }}'].status | [0]"
   until: node_info | community.general.json_query(node_status_query) == 'online'
   retries: 100
   delay: 10
