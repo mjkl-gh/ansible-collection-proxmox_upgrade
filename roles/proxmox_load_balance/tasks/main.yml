@@ -4,6 +4,7 @@
     api_host: "{{ proxmox_load_balance_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
+    validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
   register: cluster_nodes
   run_once: true
 
@@ -12,6 +13,7 @@
     api_host: "{{ proxmox_load_balance_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
+    validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
     type: qemu
   register: cluster_vm_info
   run_once: true
@@ -60,6 +62,7 @@
     api_host: "{{ inventory_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
+    validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
     name: "{{ item.key }}"
     node: "{{ item.value.target_node }}"
     migrate: true

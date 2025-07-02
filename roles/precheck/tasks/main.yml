@@ -10,6 +10,7 @@
     api_host: "{{ inventory_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
+    validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
     node: "{{ precheck_node_name }}"
   register: proxmox_tasks
 

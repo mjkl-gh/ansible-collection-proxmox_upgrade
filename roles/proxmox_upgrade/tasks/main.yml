@@ -11,6 +11,7 @@
     api_host: "{{ proxmox_upgrade_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
+    validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
   register: proxmox_nodes
   run_once: true
 
@@ -19,6 +20,7 @@
     api_host: "{{ proxmox_upgrade_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
+    validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
     type: qemu
   register: vm_info
 
@@ -64,6 +66,7 @@
     api_host: "{{ proxmox_upgrade_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
+    validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
     name: "{{ item.key }}"
     node: "{{ item.value }}"
     migrate: true
@@ -92,6 +95,7 @@
     api_host: "{{ proxmox_upgrade_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
+    validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
   register: node_info
   vars:
     node_status_query: "proxmox_nodes[?node == '{{ proxmox_upgrade_node_name }}'].status | [0]"
