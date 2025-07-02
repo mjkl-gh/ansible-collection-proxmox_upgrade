@@ -1,5 +1,76 @@
 from ansible.errors import AnsibleFilterError
 
+DOCUMENTATION = """
+    name: migration_plan
+    short_description: Create a VM migration plan using worst-fit-decreasing algorithm
+    description:
+        - This filter creates a migration plan to move VMs from a node that needs to be upgraded.
+        - Uses a worst-fit-decreasing algorithm to optimally distribute VMs to other nodes.
+        - Considers CPU and memory resources, as well as overcommitment ratios.
+        - Skips stopped VMs as they don't need migration during upgrades.
+    options:
+        vms:
+            description: List of VM dictionaries containing VM information
+            type: list
+            elements: dict
+            required: true
+        nodes:
+            description: List of node dictionaries containing node resource information
+            type: list
+            elements: dict
+            required: true
+        node_to_upgrade:
+            description: Name of the node that needs to be upgraded and VMs migrated from
+            type: str
+            required: true
+    author:
+        - Adfinis <support@adfinis.com>
+"""
+
+EXAMPLES = """
+# Create a migration plan for VMs on a node to be upgraded
+- name: Generate migration plan
+  set_fact:
+    vm_migration_plan: "{{ vms | adfinis.proxmox_upgrade.migration_plan(nodes, 'node1') }}"
+  vars:
+    vms:
+      - name: vm1
+        node: node1
+        cpu: 2
+        maxcpu: 4
+        mem: 2048
+        maxmem: 4096
+        status: running
+      - name: vm2
+        node: node1
+        cpu: 1
+        maxcpu: 2
+        mem: 1024
+        maxmem: 2048
+        status: running
+    nodes:
+      - node: node1
+        cpu: 4
+        maxcpu: 8
+        mem: 4096
+        maxmem: 8192
+      - node: node2
+        cpu: 2
+        maxcpu: 8
+        mem: 2048
+        maxmem: 8192
+"""
+
+RETURN = """
+    _value:
+        description: Dictionary mapping VM names to target node names
+        type: dict
+        returned: always
+        sample:
+            vm1: node2
+            vm2: node3
+"""
+
 
 class FilterModule(object):
     """Ansible custom filters"""

@@ -5,6 +5,61 @@ Ansible filter plugin for Proxmox load balancing operations.
 
 from typing import Dict, List, Any
 
+DOCUMENTATION = """
+    name: load_balance_plan
+    short_description: Create a load balancing plan to distribute VMs evenly across Proxmox nodes
+    description:
+        - This filter creates a migration plan to distribute VMs evenly across available Proxmox nodes.
+        - It analyzes the current VM distribution and creates a plan to balance the load.
+        - Only considers online nodes for the load balancing calculation.
+    options:
+        vms:
+            description: List of VM dictionaries containing VM information
+            type: list
+            elements: dict
+            required: true
+        nodes:
+            description: List of node dictionaries containing node information  
+            type: list
+            elements: dict
+            required: true
+    author:
+        - Adfinis <support@adfinis.com>
+"""
+
+EXAMPLES = """
+# Create a load balancing plan for VMs across nodes
+- name: Generate load balancing plan
+  set_fact:
+    migration_plan: "{{ vms | adfinis.proxmox_upgrade.load_balance_plan(nodes) }}"
+  vars:
+    vms:
+      - name: vm1
+        node: node1
+      - name: vm2
+        node: node1
+      - name: vm3
+        node: node2
+    nodes:
+      - node: node1
+        status: online
+      - node: node2
+        status: online
+      - node: node3
+        status: online
+"""
+
+RETURN = """
+    _value:
+        description: Dictionary mapping VM names to migration details
+        type: dict
+        returned: always
+        sample:
+            vm1:
+                source_node: node1
+                target_node: node2
+"""
+
 
 class FilterModule:
     """Ansible filter plugin for load balancing VMs across Proxmox nodes."""
