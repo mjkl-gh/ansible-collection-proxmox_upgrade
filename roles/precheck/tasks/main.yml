@@ -1,6 +1,6 @@
 ---
 - name: Make sure proxmoxer is installed
-    ansible.builtin.pip:
+  ansible.builtin.pip:
       name: 
         - proxmoxer
         - requests
