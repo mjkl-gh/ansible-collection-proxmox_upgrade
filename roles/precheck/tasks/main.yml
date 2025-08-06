@@ -1,4 +1,10 @@
 ---
+- name: Make sure pip is installed
+  ansible.builtin.apt:
+    name: python3-proxmoxer
+    update_cache: true
+    state: present
+    
 - name: Make sure proxmoxer is installed
   ansible.builtin.pip:
       name: 
