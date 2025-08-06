@@ -1,9 +1,9 @@
 ---
 - name: Make sure proxmoxer is installed
-  ansible.builtin.apt:
-    name: python3-proxmoxer
-    update_cache: true
-    state: present
+    ansible.builtin.pip:
+      name: 
+        - proxmoxer
+        - requests
 
 - name: List all running proxmox tasks
   community.general.proxmox_tasks_info:
