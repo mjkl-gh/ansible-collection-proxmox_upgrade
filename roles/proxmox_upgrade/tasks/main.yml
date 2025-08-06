@@ -7,7 +7,7 @@
   run_once: true
 
 - name: List existing nodes
-  community.general.proxmox_node_info:
+  community.proxmox..proxmox_node_info:
     api_host: "{{ proxmox_upgrade_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
@@ -16,7 +16,7 @@
   run_once: true
 
 - name: Fetch all VM information
-  community.general.proxmox_vm_info:
+  community.proxmox..proxmox_vm_info:
     api_host: "{{ proxmox_upgrade_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
@@ -62,7 +62,7 @@
     - proxmox_upgrade_confirm_migration | bool
 
 - name: Migrate VMs to new node
-  community.general.proxmox_kvm:
+  community.proxmox..proxmox_kvm:
     api_host: "{{ proxmox_upgrade_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
@@ -97,7 +97,7 @@
     search_paths: ['/lib/molly-guard', '/sbin']
 
 - name: Wait for node to come back online
-  community.general.proxmox_node_info:
+  community.proxmox..proxmox_node_info:
     api_host: "{{ proxmox_upgrade_api_hostname }}"
     api_user: "{{ proxmox_api_user }}"
     api_password: "{{ proxmox_api_password | default(omit) }}"
@@ -105,7 +105,7 @@
   register: node_info
   vars:
     node_status_query: "proxmox_nodes[?node == '{{ proxmox_upgrade_node_name }}'].status | [0]"
-  until: node_info | community.general.json_query(node_status_query) == 'online'
+  until: node_info | community.proxmox..json_query(node_status_query) == 'online'
   retries: 100
   delay: 10
 
