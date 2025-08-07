@@ -13,6 +13,7 @@
     api_password: "{{ proxmox_api_password | default(omit) }}"
     validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
   register: proxmox_nodes
+  delegate_to: localhost
   run_once: true
 
 - name: Fetch all VM information
@@ -22,6 +23,7 @@
     api_password: "{{ proxmox_api_password | default(omit) }}"
     validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
     type: qemu
+  delegate_to: localhost
   register: vm_info
 
 - name: Create migration plan
@@ -74,6 +76,7 @@
     timeout: "{{ proxmox_upgrade_migration_timeout }}"
   loop: "{{ vm_migration_plan | dict2items }}"
   run_once: true
+  delegate_to: localhost
   when: >
     vm_migration_plan | length > 0 and
     (not proxmox_upgrade_confirm_migration | bool or
@@ -103,6 +106,7 @@
     api_password: "{{ proxmox_api_password | default(omit) }}"
     validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
   register: node_info
+  delegate_to: localhost
   vars:
     node_status_query: "proxmox_nodes[?node == '{{ proxmox_upgrade_node_name }}'].status | [0]"
   until: node_info | community.proxmox.json_query(node_status_query) == 'online'
